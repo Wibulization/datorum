@@ -144,7 +144,7 @@ public class JdbcMigrationRepository implements MigrationRepository {
                 // Execute table creation and data insertion
                 stmt.execute(
                         """
-                                    CREATE TABLE IF NOT EXISTS datorum_schema.migration (
+                                        CREATE TABLE IF NOT EXISTS datorum_schema.migration (
                                         parent_id              BIGINT,
                                         id                     BIGINT,
                                         previous_parent_id     BIGINT,
@@ -178,6 +178,7 @@ public class JdbcMigrationRepository implements MigrationRepository {
                 conn.rollback();
                 throw new RuntimeException(e);
             }
+
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
