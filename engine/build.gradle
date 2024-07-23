@@ -19,3 +19,14 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+sourceSets {
+    test {
+        java {
+            srcDirs = ['src/testIntegration/java', 'src/testUnit/java']
+        }
+        resources {
+            srcDirs = ['src/testIntegration/resources', 'src/testUnit/resources']
+        }
+    }
+}
