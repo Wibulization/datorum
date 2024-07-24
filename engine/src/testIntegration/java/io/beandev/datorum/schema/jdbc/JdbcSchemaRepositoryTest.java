@@ -4,6 +4,7 @@ import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+import io.beandev.datorum.CreateDatabase;
 import io.beandev.datorum.data.AttributeRecord;
 import io.beandev.datorum.data.BigId;
 import io.beandev.datorum.data.EntityRecord;
@@ -28,7 +30,6 @@ import io.beandev.datorum.schema.Entity;
 
 import static java.lang.System.out;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -41,17 +42,22 @@ public class JdbcSchemaRepositoryTest {
     private DataSource dataSource;
     private DSLContext create;
 
+    @BeforeAll
+    public static void createDB() throws Exception {
+        new CreateDatabase();
+
+    }
+
     @BeforeEach
     public void setup() throws SQLException {
         HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl("jdbc:postgresql://127.0.0.1:5432/eventstore_db");
+        hikariConfig.setJdbcUrl("jdbc:postgresql://127.0.0.1:32543/eventstore_db");
         hikariConfig.setUsername("postgres");
         hikariConfig.setPassword("password");
 
         HikariDataSource cp = new HikariDataSource(hikariConfig);
         cp.setMaximumPoolSize(12);
         cp.setMinimumIdle(2);
-
         this.dataSource = cp;
         try (Connection conn = cp.getConnection()) {
             this.create = DSL.using(conn, SQLDialect.POSTGRES);
