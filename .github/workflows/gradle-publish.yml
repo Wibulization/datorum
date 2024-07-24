@@ -11,7 +11,7 @@ jobs:
       postgres:
         image: postgres:latest
         env:
-          POSTGRES_USER: eventstore_db
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
         options: >-
           --health-cmd pg_isready
