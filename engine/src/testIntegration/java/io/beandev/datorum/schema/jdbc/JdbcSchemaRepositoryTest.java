@@ -45,7 +45,6 @@ public class JdbcSchemaRepositoryTest {
     @BeforeAll
     public static void createDB() throws Exception {
         new CreateDatabase();
-
     }
 
     @BeforeEach
