@@ -43,6 +43,7 @@ jobs:
       uses: helm/kind-action@v1.10.0
       with:
         config: k8s/clusterdb.yaml
+        cluster_name: connectdb
 
     - name: Install kubectl
       run: |
