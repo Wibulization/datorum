@@ -42,7 +42,7 @@ jobs:
     - name: Install and config kind Kubernetes
       uses: container-tools/kind-action@v1
       with:
-        config: k8s/clusterdb.yaml
+        version: v0.16.0
 
     - name: Install kubectl
       run: |
@@ -50,6 +50,10 @@ jobs:
           chmod +x ./kubectl
           sudo mv ./kubectl /usr/local/bin/kubectl
 
+    - name: Create KinD cluster
+      run: |
+            kind create cluster --config k8s/clusterdb.yaml
+    
     - name: Set kubectl context
       run: |
           kubectl config use-context kind-connectdb
