@@ -20,22 +20,11 @@ jobs:
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v3
 
-    - name: Install PostgreSQL
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql postgresql-contrib  
-
     - name: Install and config kind Kubernetes
       uses: helm/kind-action@v1.10.0
       with:
         config: k8s/clusterdb.yaml
         cluster_name: connectdb
-
-    - name: Install kubectl
-      run: |
-          curl -LO "https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl"
-          chmod +x ./kubectl
-          sudo mv ./kubectl /usr/local/bin/kubectl
 
     
     - name: Set kubectl context
