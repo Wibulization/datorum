@@ -78,16 +78,19 @@ public class CreateDatabase {
 
         waitForPodReady(api, "default", "postgres");
 
-        String dbUrl = "jdbc:postgresql://localhost:32543/"; // Connect to default database
-        String username = "postgres";
-        String password = "password";
+        // String dbUrl = "jdbc:postgresql://localhost:32543/"; // Connect to default
+        // database
+        // String username = "postgres";
+        // String password = "password";
 
-        try (Connection connection = DriverManager.getConnection(dbUrl, username, password)) {
-            // Create a new database `db_test`
-            createDatabase(connection, "eventstore_db");
-        } catch (SQLException e) {
-            System.err.println("Database connection error to db_test: " + e.getMessage());
-        }
+        // try (Connection connection = DriverManager.getConnection(dbUrl, username,
+        // password)) {
+        // // Create a new database `db_test`
+        // createDatabase(connection, "eventstore_db");
+        // } catch (SQLException e) {
+        // System.err.println("Database connection error to db_test: " +
+        // e.getMessage());
+        // }
 
     }
 
@@ -105,7 +108,7 @@ public class CreateDatabase {
                                         .containerPort(5432)))
                                 .env(Arrays.asList(
                                         new V1EnvVar().name("POSTGRES_DB")
-                                                .value("postgres"),
+                                                .value("eventstore_db"),
                                         new V1EnvVar().name("POSTGRES_USER")
                                                 .value("postgres"),
                                         new V1EnvVar().name("POSTGRES_PASSWORD")
@@ -157,23 +160,25 @@ public class CreateDatabase {
         }
     }
 
-    // Method to create a new database
-    private static void createDatabase(Connection connection, String dbName) {
-        try (Statement stmt = connection.createStatement()) {
-            // Check if the database already exists
-            ResultSet rs = stmt.executeQuery("SELECT 1 FROM pg_database WHERE datname = '" + dbName + "'");
+    // // Method to create a new database
+    // private static void createDatabase(Connection connection, String dbName) {
+    // try (Statement stmt = connection.createStatement()) {
+    // // Check if the database already exists
+    // ResultSet rs = stmt.executeQuery("SELECT 1 FROM pg_database WHERE datname =
+    // '" + dbName + "'");
 
-            if (rs.next()) {
-                System.out.println("Database " + dbName + " already exists.");
-            } else {
-                // Create the database if it does not exist
-                String createDatabase = "CREATE DATABASE " + dbName;
-                stmt.executeUpdate(createDatabase);
-                System.out.println("Database " + dbName + " created successfully.");
-            }
-        } catch (SQLException e) {
-            System.err.println("Error executing SQL to create database: " + e.getMessage());
-        }
-    }
+    // if (rs.next()) {
+    // System.out.println("Database " + dbName + " already exists.");
+    // } else {
+    // // Create the database if it does not exist
+    // String createDatabase = "CREATE DATABASE " + dbName;
+    // stmt.executeUpdate(createDatabase);
+    // System.out.println("Database " + dbName + " created successfully.");
+    // }
+    // } catch (SQLException e) {
+    // System.err.println("Error executing SQL to create database: " +
+    // e.getMessage());
+    // }
+    // }
 
 }
