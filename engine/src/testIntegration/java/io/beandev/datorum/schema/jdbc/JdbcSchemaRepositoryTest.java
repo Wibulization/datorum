@@ -54,7 +54,7 @@ public class JdbcSchemaRepositoryTest {
         cp.setMinimumIdle(2);
         this.dataSource = cp;
 
-        // Thử mở kết nối để kiểm tra cấu hình
+        // Try to open the connection of data source
         try (Connection testConnection = dataSource.getConnection()) {
             if (testConnection != null) {
                 System.out.println("HikariCP configuration is valid and connection is successful.");
@@ -113,11 +113,12 @@ public class JdbcSchemaRepositoryTest {
     @Test
     public void testSchemaCreationFailure() {
         try {
-            // Xác minh rằng schema không được tạo ra (dự kiến lỗi sẽ xảy ra)
+            // Verify that schema is not created
+            // Connect without schema
             try (Connection conn = dataSource.getConnection()) {
                 DatabaseMetaData metaData = conn.getMetaData();
                 try (ResultSet rs = metaData.getSchemas(null, "datorum_schema")) {
-                    // Đây là một lỗi dự kiến, vì chúng ta mong muốn schema không tồn tại
+                    // This is expected error, the schema is not existed
                     assertFalse(rs.next(), "Schema 'datorum_schema' should not exist after failed creation");
                 }
             }
@@ -130,7 +131,7 @@ public class JdbcSchemaRepositoryTest {
     @Test
     public void testCheckIntoSystemInfo() {
 
-        // Tạo các bảng cơ sở
+        // Create schema and tables
         jdbcSchemaRepository.createBaseTables();
 
         try (Connection conn = dataSource.getConnection()) {
@@ -139,7 +140,7 @@ public class JdbcSchemaRepositoryTest {
             try (PreparedStatement pstmt = conn.prepareStatement(selectSql)) {
                 try (ResultSet rs = pstmt.executeQuery()) {
                     assertTrue(rs.next(), "Row should exist");
-                    // Kiểm tra giá trị của property_value
+                    // Verify the value of the property_name and the property_value
                     String propertyName = rs.getString("property_name");
                     String propertyValue = rs.getString("property_value");
 
@@ -157,14 +158,13 @@ public class JdbcSchemaRepositoryTest {
     @Test
     public void testCheckFailType() {
 
-        // Tạo các bảng cơ sở
+        // Create schema and tables
         jdbcSchemaRepository.createBaseTables();
 
         try (Connection conn = dataSource.getConnection()) {
             // Verify type creation
             DatabaseMetaData metaData = conn.getMetaData();
 
-            // Replace 'your_type_name' with the actual type name you expect
             String[] typeNames = { "your_type_name1", "your_type_name2" };
 
             for (String typeName : typeNames) {
@@ -174,18 +174,18 @@ public class JdbcSchemaRepositoryTest {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            Assertions.fail("Exception occurred while testing : " + e.getMessage());
+            Assertions.fail("Exception occurred while testing type : " + e.getMessage());
         }
     }
 
     @Test
     public void testCheckFailTable() {
 
-        // Tạo các bảng cơ sở
+        // Create schema and tables
         jdbcSchemaRepository.createBaseTables();
 
         try (Connection conn = dataSource.getConnection()) {
-            // Verify type creation
+            // Verify table creation
             DatabaseMetaData metaData = conn.getMetaData();
 
             String[] tableNames = { "table1", "table2", "test3" };
@@ -197,7 +197,7 @@ public class JdbcSchemaRepositoryTest {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            Assertions.fail("Exception occurred while testing : " + e.getMessage());
+            Assertions.fail("Exception occurred while testing table : " + e.getMessage());
         }
     }
 
