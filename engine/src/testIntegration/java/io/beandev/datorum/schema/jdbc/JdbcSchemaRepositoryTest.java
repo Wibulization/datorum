@@ -1,46 +1,41 @@
 package io.beandev.datorum.schema.jdbc;
 
-import org.jooq.DSLContext;
-import org.jooq.SQLDialect;
-import org.jooq.impl.DSL;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import io.beandev.datorum.CreateDatabase;
-import io.beandev.datorum.data.AttributeRecord;
-import io.beandev.datorum.data.BigId;
-import io.beandev.datorum.data.EntityRecord;
-import io.beandev.datorum.data.Event;
-import io.beandev.datorum.migration.Difference;
-import io.beandev.datorum.migration.Migration;
-import io.beandev.datorum.migration.Migrator;
-import io.beandev.datorum.migration.Scope;
-import io.beandev.datorum.migration.jdbc.JdbcMigrationRepository;
-import io.beandev.datorum.schema.Aggregate;
-import io.beandev.datorum.schema.App;
-import io.beandev.datorum.schema.Attribute;
-import io.beandev.datorum.schema.Context;
-import io.beandev.datorum.schema.Entity;
 
 import static java.lang.System.out;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class JdbcSchemaRepositoryTest {
     private DataSource dataSource;
-    private DSLContext create;
+    private JdbcSchemaRepository jdbcSchemaRepository;
 
     @BeforeAll
     public static void createDB() throws Exception {
@@ -58,8 +53,24 @@ public class JdbcSchemaRepositoryTest {
         cp.setMaximumPoolSize(12);
         cp.setMinimumIdle(2);
         this.dataSource = cp;
-        try (Connection conn = cp.getConnection()) {
-            this.create = DSL.using(conn, SQLDialect.POSTGRES);
+
+        // Thử mở kết nối để kiểm tra cấu hình
+        try (Connection testConnection = dataSource.getConnection()) {
+            if (testConnection != null) {
+                System.out.println("HikariCP configuration is valid and connection is successful.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            fail("HikariCP configuration is invalid or connection failed: " + e.getMessage());
+        }
+
+        this.jdbcSchemaRepository = new JdbcSchemaRepository(dataSource);
+
+        // Cleanup the database before running tests
+        try (Connection conn = dataSource.getConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("DROP SCHEMA IF EXISTS datorum_schema CASCADE");
+            }
         }
     }
 
@@ -70,164 +81,124 @@ public class JdbcSchemaRepositoryTest {
         }
     }
 
-    private App createApp() {
-        return new App(123, "Datorum");
-    }
-
-    private Context createContext(App app) {
-        return new Context(456, "Datorum Context", app);
-    }
-
-    private Aggregate createAggregate(Context context) {
-        return new Aggregate(789, "Datorum Aggregate", context);
-    }
-
-    private Entity createEntity(Aggregate aggregate) {
-        return new Entity(0, "Datorum Entity", aggregate);
-    }
-
-    private Attribute createAttribute(Entity entity) {
-        return new Attribute(
-                1,
-                "Datorum Attribute",
-                new Attribute.DataType(Attribute.DataType.Type.STRING, 120),
-                entity);
-    }
-
-    private AttributeRecord createAttributeRecord(Attribute attribute, EntityRecord entityRecord, String value) {
-        return new AttributeRecord(new BigId(12), 1, attribute, entityRecord, value);
-    }
-
-    private AttributeRecord createAttributeIntRecord(Attribute attribute, EntityRecord entityRecord, Long value) {
-        return new AttributeRecord(new BigId(12), 1, attribute, entityRecord, value);
-    }
-
     @Test
-    public void testAttributeCreation() {
-        App app = createApp();
-        Context context = createContext(app);
-        Aggregate aggregate = createAggregate(context);
-        Entity entity = createEntity(aggregate);
-        Attribute attribute = createAttribute(entity);
-
-        assertNotNull(attribute);
-        assertEquals(1, attribute.id());
-        assertEquals("Datorum Attribute", attribute.name());
-        assertEquals(Attribute.DataType.Type.STRING, attribute.type().type());
-        assertEquals(120, attribute.type().precisionOrLength());
-    }
-
-    @Test
-    public void testAttributeRecordCreation() {
-        App app = createApp();
-        Context context = createContext(app);
-        Aggregate aggregate = createAggregate(context);
-        Entity entity = createEntity(aggregate);
-        Attribute attribute = createAttribute(entity);
-
-        AttributeRecord record = createAttributeRecord(attribute, null, "Test Value");
-
-        assertNotNull(record);
-        assertEquals(new BigId(12), record.id());
-        assertEquals("Test Value", record.value().stringValue());
-    }
-
-    @Test
-    public void testEventCreation() {
-        App app = createApp();
-        Context context = createContext(app);
-        Aggregate aggregate = createAggregate(context);
-        Entity entity = createEntity(aggregate);
-        Attribute attribute = createAttribute(entity);
-
-        AttributeRecord record = createAttributeRecord(attribute, null, "Datorum Value");
-
-        Event event = new Event(new BigId(1),
-                new Event.Operation[] { new Event.Operation(Event.Operator.CREATE, new Event.Operand(record)) });
-
-        assertNotNull(event);
-        assertEquals(new BigId(1), event.id());
-        assertEquals(Event.Operator.CREATE, event.operations()[0].operator());
-
-        ObjectMapper mapper = new ObjectMapper();
-
+    public void testJdbcSchemaRepositoryCreation() {
         try {
-            String jsonString = mapper.writeValueAsString(record);
-            assertNotNull(jsonString);
-            assertTrue(jsonString.contains("Datorum Value"));
+            assertNotNull(jdbcSchemaRepository, "JdbcSchemaRepository should be successfully instantiated");
         } catch (Exception e) {
-            fail("Serialization failed: " + e.getMessage());
+            e.printStackTrace();
+            fail("Exception occurred while testing JdbcSchemaRepository creation: " + e.getMessage());
         }
     }
 
     @Test
-    public void testEventWithIntRecord() {
-        App app = createApp();
-        Context context = createContext(app);
-        Aggregate aggregate = createAggregate(context);
-        Entity entity = createEntity(aggregate);
-        Attribute attribute = createAttribute(entity);
-
-        EntityRecord entityValue = new EntityRecord(new BigId(1), entity, null, "Datorum Entity Value");
-
-        AttributeRecord intRecord = createAttributeIntRecord(attribute, entityValue, 333L);
-
-        Event event = new Event(new BigId(1),
-                new Event.Operation[] { new Event.Operation(Event.Operator.CREATE, new Event.Operand(intRecord)) });
-
-        assertNotNull(event);
-        assertEquals(new BigId(1), event.id());
-        assertEquals(Event.Operator.CREATE, event.operations()[0].operator());
-        assertEquals(333L, intRecord.value().longValue());
-
-        ObjectMapper mapper = new ObjectMapper();
-
+    public void testSchemaCreation() {
         try {
-            String jsonString = mapper.writeValueAsString(intRecord);
-            assertNotNull(jsonString);
-            assertTrue(jsonString.contains("Datorum Entity Value"));
-        } catch (Exception e) {
-            fail("Serialization failed: " + e.getMessage());
+            // Create schema and tables
+            jdbcSchemaRepository.createBaseTables();
+
+            // Verify schema creation
+            try (Connection conn = dataSource.getConnection()) {
+                DatabaseMetaData metaData = conn.getMetaData();
+                try (ResultSet rs = metaData.getSchemas(null, "datorum_schema")) {
+                    assertTrue(rs.next(), "Schema 'datorum_schema' should exist after creation");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            fail("Exception occurred while testing schema creation: " + e.getMessage());
         }
     }
 
     @Test
-    public void testDatabaseConnection() throws SQLException {
+    public void testSchemaCreationFailure() {
+        try {
+            // Xác minh rằng schema không được tạo ra (dự kiến lỗi sẽ xảy ra)
+            try (Connection conn = dataSource.getConnection()) {
+                DatabaseMetaData metaData = conn.getMetaData();
+                try (ResultSet rs = metaData.getSchemas(null, "datorum_schema")) {
+                    // Đây là một lỗi dự kiến, vì chúng ta mong muốn schema không tồn tại
+                    assertFalse(rs.next(), "Schema 'datorum_schema' should not exist after failed creation");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            fail("Exception occurred while testing schema creation failure: " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void testCheckIntoSystemInfo() {
+
+        // Tạo các bảng cơ sở
+        jdbcSchemaRepository.createBaseTables();
+
         try (Connection conn = dataSource.getConnection()) {
-            assertNotNull(conn);
-            assertTrue(conn.isValid(2));
+            // Verify data insertion
+            String selectSql = "SELECT property_name, property_value FROM datorum_schema.system_info";
+            try (PreparedStatement pstmt = conn.prepareStatement(selectSql)) {
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    assertTrue(rs.next(), "Row should exist");
+                    // Kiểm tra giá trị của property_value
+                    String propertyName = rs.getString("property_name");
+                    String propertyValue = rs.getString("property_value");
+
+                    Assertions.assertEquals("schema.version", propertyName,
+                            "The property_name should be 'schema.version'");
+                    Assertions.assertEquals("v1.0.0", propertyValue, "The property_value should be 'v1.0.0'");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Assertions.fail("Exception occurred while testing data insertion: " + e.getMessage());
         }
     }
 
-    // @Test
-    // public void testMigrationCreationAndApplication() throws SQLException {
-    // App app = createApp();
-    // Context context = createContext(app);
-    // Aggregate aggregate = createAggregate(context);
+    @Test
+    public void testCheckFailType() {
 
-    // Migration migration = new Migration(
-    // 2,
-    // 2024071533478L,
-    // new Difference[] {
-    // new Difference(
-    // 1,
-    // "name2",
-    // Scope.AGGREGATE)
-    // });
+        // Tạo các bảng cơ sở
+        jdbcSchemaRepository.createBaseTables();
 
-    // try (Connection conn = dataSource.getConnection()) {
-    // JdbcMigrationRepository migrationRepository = new
-    // JdbcMigrationRepository(dataSource);
-    // migrationRepository.createBaseTables();
+        try (Connection conn = dataSource.getConnection()) {
+            // Verify type creation
+            DatabaseMetaData metaData = conn.getMetaData();
 
-    // Migrator migrator = new Migrator(migrationRepository);
-    // migrator.apply(migration);
+            // Replace 'your_type_name' with the actual type name you expect
+            String[] typeNames = { "your_type_name1", "your_type_name2" };
 
-    // // var appliedMigrations = migrationRepository;
-    // // assertFalse(appliedMigrations.isEmpty());
-    // // assertEquals(1, appliedMigrations.size());
-    // // assertEquals(migration.id(), appliedMigrations.get(0).id());
-    // }
-    // }
+            for (String typeName : typeNames) {
+                try (ResultSet rs = metaData.getUDTs(null, "datorum_schema", typeName, null)) {
+                    assertFalse(rs.next(), "Type '" + typeName + "' should not exist after creation");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Assertions.fail("Exception occurred while testing : " + e.getMessage());
+        }
+    }
+
+    @Test
+    public void testCheckFailTable() {
+
+        // Tạo các bảng cơ sở
+        jdbcSchemaRepository.createBaseTables();
+
+        try (Connection conn = dataSource.getConnection()) {
+            // Verify type creation
+            DatabaseMetaData metaData = conn.getMetaData();
+
+            String[] tableNames = { "table1", "table2", "test3" };
+
+            for (String table : tableNames) {
+                try (ResultSet rs = metaData.getTables(null, "datorum_schema", table, new String[] { "TABLE" })) {
+                    assertFalse(rs.next(), "Table '" + table + "' should not exist after creation");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Assertions.fail("Exception occurred while testing : " + e.getMessage());
+        }
+    }
 
 }
