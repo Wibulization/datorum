@@ -15,11 +15,14 @@ import java.sql.Statement;
 
 import javax.sql.DataSource;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -34,11 +37,6 @@ public class JdbcMigrationRepositoryTest {
     private DataSource dataSource;
     private JdbcMigrationRepository jdbcMigrationRepository;
     private JdbcSchemaRepository jdbcSchemaRepository;
-
-    @BeforeAll
-    public static void createDB() throws Exception {
-        new CreateDatabase();
-    }
 
     @BeforeEach
     public void setup() throws SQLException {
@@ -55,8 +53,8 @@ public class JdbcMigrationRepositoryTest {
         // Try to open the connection of data source
         testConnection(dataSource);
 
-        // Cleanup the database before running tests
-        cleanupDatabase(dataSource);
+        // Cleanup the schema before running tests
+        cleanupSchema(dataSource);
 
         // Create Schema before test
         jdbcSchemaRepository = new JdbcSchemaRepository(dataSource);
@@ -84,14 +82,14 @@ public class JdbcMigrationRepositoryTest {
         }
     }
 
-    private void cleanupDatabase(DataSource dataSource) {
+    private void cleanupSchema(DataSource dataSource) {
         try (Connection conn = dataSource.getConnection()) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("DROP SCHEMA IF EXISTS datorum_schema CASCADE");
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            fail("Database cleanup failed: " + e.getMessage());
+            fail("Schema cleanup failed: " + e.getMessage());
         }
     }
 
@@ -107,6 +105,7 @@ public class JdbcMigrationRepositoryTest {
 
     @Test
     void testTablesExist() {
+        // Create table migration and difference
         jdbcMigrationRepository.createBaseTables();
         try (Connection conn = dataSource.getConnection()) {
             DatabaseMetaData metaData = conn.getMetaData();

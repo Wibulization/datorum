@@ -21,10 +21,9 @@ jobs:
       uses: gradle/gradle-build-action@v3
 
     - name: Install and config kind Kubernetes
-      uses: helm/kind-action@v1.10.0
+      uses: container-tools/kind-action@v2.0.4
       with:
         config: k8s/clusterdb.yaml
-        cluster_name: connectdb
 
     
     - name: Set kubectl context

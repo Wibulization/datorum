@@ -1,10 +1,13 @@
 package io.beandev.datorum.schema.jdbc;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -12,6 +15,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import io.beandev.datorum.CreateDatabase;
 
 import static java.lang.System.out;
+import static org.jooq.impl.DSL.createDatabase;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,11 +41,6 @@ public class JdbcSchemaRepositoryTest {
     private DataSource dataSource;
     private JdbcSchemaRepository jdbcSchemaRepository;
 
-    @BeforeAll
-    public static void createDB() throws Exception {
-        new CreateDatabase();
-    }
-
     @BeforeEach
     public void setup() throws SQLException {
         HikariConfig hikariConfig = new HikariConfig();
@@ -55,6 +54,23 @@ public class JdbcSchemaRepositoryTest {
         this.dataSource = cp;
 
         // Try to open the connection of data source
+        testConnection(dataSource);
+
+        // Cleanup the schema before running tests
+        cleanupSchema(dataSource);
+
+        this.jdbcSchemaRepository = new JdbcSchemaRepository(dataSource);
+
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (dataSource instanceof HikariDataSource) {
+            ((HikariDataSource) dataSource).close();
+        }
+    }
+
+    private void testConnection(DataSource dataSource) {
         try (Connection testConnection = dataSource.getConnection()) {
             if (testConnection != null) {
                 System.out.println("HikariCP configuration is valid and connection is successful.");
@@ -63,21 +79,16 @@ public class JdbcSchemaRepositoryTest {
             e.printStackTrace();
             fail("HikariCP configuration is invalid or connection failed: " + e.getMessage());
         }
+    }
 
-        this.jdbcSchemaRepository = new JdbcSchemaRepository(dataSource);
-
-        // Cleanup the database before running tests
+    private void cleanupSchema(DataSource dataSource) {
         try (Connection conn = dataSource.getConnection()) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("DROP SCHEMA IF EXISTS datorum_schema CASCADE");
             }
-        }
-    }
-
-    @AfterEach
-    public void tearDown() {
-        if (dataSource instanceof HikariDataSource) {
-            ((HikariDataSource) dataSource).close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            fail("Schema cleanup failed: " + e.getMessage());
         }
     }
 

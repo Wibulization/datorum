@@ -28,70 +28,55 @@ import io.kubernetes.client.openapi.models.V1ServiceSpec;
 import io.kubernetes.client.util.Config;
 
 public class CreateDatabase {
-    public CreateDatabase() {
-        try {
-            initDatabase();
-        } catch (Exception e) {
-            System.out.println("Exception : " + e);
+
+    private static CreateDatabase instance;
+    private CoreV1Api api;
+
+    public CreateDatabase() throws Exception {
+        ApiClient client = Config.defaultClient();
+        Configuration.setDefaultApiClient(client);
+        // Create CoreV1Api to perform operations with Core API
+        this.api = new CoreV1Api();
+        initDatabase();
+    }
+
+    public static CreateDatabase getInstance() throws Exception {
+        if (instance == null) {
+            instance = new CreateDatabase();
+        }
+        return instance;
+    }
+
+    public static void removeDatabase() throws Exception {
+        if (instance != null) {
+            instance.cleanup();
+            instance = null;
         }
     }
 
-    public static void initDatabase() throws Exception {
-        ApiClient client = Config.defaultClient();
-        Configuration.setDefaultApiClient(client);
-        System.out.println("Kubernetes client has been configured");
+    private void initDatabase() throws Exception {
 
-        // Tạo CoreV1Api để thực hiện các thao tác với Core API (Pods, Services, v.v.)
-        CoreV1Api api = new CoreV1Api();
-
-        try {
-            V1Service existingService = api.readNamespacedService("postgres-service", "default", null);
-            System.out.println("Service already exists: " + existingService.getMetadata().getName());
-        } catch (ApiException e) {
-            if (e.getCode() == 404) {
-                // Service does not exist, create it
-                V1Service service = createService();
-                V1Service createService = api.createNamespacedService("default", service, null, null, null, null);
-                System.out.println("NodePort Service created: " + createService.getMetadata().getName());
-            } else {
-                throw e; // Rethrow other API exceptions
-            }
-        }
+        // Check if Service already exists
+        checkServiceExistsAndCreateService(api, "default", "postgres-service");
 
         // Wait for the Service to be ready
         waitForServiceReady(api, "default", "postgres-service");
 
         // Check if Pod already exists
-        try {
-            V1Pod existingPod = api.readNamespacedPod("postgres", "default", null);
-            System.out.println("Pod already exists: " + existingPod.getMetadata().getName());
-        } catch (ApiException e) {
-            if (e.getCode() == 404) {
-                // Pod does not exist, create it
-                V1Pod pod = createPostgresPod();
-                V1Pod createdPod = api.createNamespacedPod("default", pod, null, null, null, null);
-                System.out.println("PostgreSQL Pod created: " + createdPod.getMetadata().getName());
-            } else {
-                throw e; // Rethrow other API exceptions
-            }
-        }
+        checkPodExistsAndCreatePod(api, "default", "postgres");
 
+        // Wait for the Pod to be ready
         waitForPodReady(api, "default", "postgres");
 
-        // String dbUrl = "jdbc:postgresql://localhost:32543/"; // Connect to default
-        // database
-        // String username = "postgres";
-        // String password = "password";
+    }
 
-        // try (Connection connection = DriverManager.getConnection(dbUrl, username,
-        // password)) {
-        // // Create a new database `db_test`
-        // createDatabase(connection, "eventstore_db");
-        // } catch (SQLException e) {
-        // System.err.println("Database connection error to db_test: " +
-        // e.getMessage());
-        // }
+    public void cleanup() throws Exception {
 
+        // Delete Postgres Pod
+        deletePod(api, "default", "postgres");
+
+        // Delete Service
+        deleteService(api, "default", "postgres-service");
     }
 
     // Method to create PostgreSQL Pod
@@ -160,25 +145,67 @@ public class CreateDatabase {
         }
     }
 
-    // // Method to create a new database
-    // private static void createDatabase(Connection connection, String dbName) {
-    // try (Statement stmt = connection.createStatement()) {
-    // // Check if the database already exists
-    // ResultSet rs = stmt.executeQuery("SELECT 1 FROM pg_database WHERE datname =
-    // '" + dbName + "'");
+    // Method to check and create pod
+    private static void checkPodExistsAndCreatePod(CoreV1Api api, String namespace, String podName) throws Exception {
+        try {
+            V1Pod existingPod = api.readNamespacedPod(podName, namespace, null);
+            System.out.println("Pod already exists: " + existingPod.getMetadata().getName());
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                // Pod does not exist, create it
+                V1Pod pod = createPostgresPod();
+                V1Pod createdPod = api.createNamespacedPod(namespace, pod, null, null, null, null);
+                System.out.println("PostgreSQL Pod created: " + createdPod.getMetadata().getName());
+            } else {
+                throw e; // Rethrow other API exceptions
+            }
+        }
+    }
 
-    // if (rs.next()) {
-    // System.out.println("Database " + dbName + " already exists.");
-    // } else {
-    // // Create the database if it does not exist
-    // String createDatabase = "CREATE DATABASE " + dbName;
-    // stmt.executeUpdate(createDatabase);
-    // System.out.println("Database " + dbName + " created successfully.");
-    // }
-    // } catch (SQLException e) {
-    // System.err.println("Error executing SQL to create database: " +
-    // e.getMessage());
-    // }
-    // }
+    // Method to check and create service
+    private static void checkServiceExistsAndCreateService(CoreV1Api api, String namespace, String serviceName)
+            throws Exception {
+        try {
+            V1Service existingService = api.readNamespacedService(serviceName, namespace, null);
+            System.out.println("Service already exists: " + existingService.getMetadata().getName());
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                // Service does not exist, create it
+                V1Service service = createService();
+                V1Service createdService = api.createNamespacedService(namespace, service, null, null, null, null);
+                System.out.println("Service created: " + createdService.getMetadata().getName());
+            } else {
+                throw e; // Rethrow other API exceptions
+            }
+        }
+    }
+
+    // Method to delete Pod
+    private static void deletePod(CoreV1Api api, String namespace, String podName) throws Exception {
+        try {
+            api.deleteNamespacedPod(podName, namespace, null, null, null, null, null, null);
+            System.out.println("Pod deleted: " + podName);
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                System.out.println("Pod not found: " + podName);
+            } else {
+                throw e; // Rethrow other API exceptions
+            }
+        }
+    }
+
+    // Methodt to delete Service
+    private static void deleteService(CoreV1Api api, String namespace, String serviceName) throws Exception {
+        try {
+            api.deleteNamespacedService(serviceName, namespace, null, null, null, null, null, null);
+            System.out.println("Service deleted: " + serviceName);
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                System.out.println("Service not found: " + serviceName);
+            } else {
+                throw e; // Rethrow other API exceptions
+            }
+        }
+    }
 
 }
