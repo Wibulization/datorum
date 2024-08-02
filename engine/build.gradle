@@ -14,13 +14,10 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.7.3'
     implementation 'com.zaxxer:HikariCP:5.1.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
-    implementation 'io.kubernetes:client-java:18.0.0'
 
-    //Test Implementation
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.11.0-RC1'
-    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.11.0-RC1'
-    testImplementation 'org.junit.platform:junit-platform-suite-api:1.11.0-RC1'
-    testRuntimeOnly 'org.junit.platform:junit-platform-suite-engine:1.11.0-RC1'
+    testImplementation 'io.cucumber:cucumber-java:7.15.0'
+    testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.15.0'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 }
 
 
@@ -65,10 +62,10 @@ test {
 sourceSets {
     test {
         java {
-            srcDirs = ['src/testIntegration/java', 'src/testUnit/java']
+            srcDirs = ['specs-java', 'src/testIntegration/java', 'src/testUnit/java']
         }
         resources {
-            srcDirs = ['src/testIntegration/resources', 'src/testUnit/resources']
+            srcDirs = ['specs', 'src/testIntegration/resources', 'src/testUnit/resources']
         }
     }
 }
