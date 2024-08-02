@@ -13,7 +13,6 @@ import org.junit.platform.suite.api.SelectPackages;
 import org.junit.platform.suite.api.Suite;
 
 import io.beandev.datorum.migration.jdbc.JdbcMigrationRepositoryTest;
-import io.beandev.datorum.schema.jdbc.JdbcSchemaRepositoryTest;
 
 @Suite
 @Tag("MyTestSuite")

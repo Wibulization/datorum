@@ -14,10 +14,17 @@ dependencies {
     implementation 'org.postgresql:postgresql:42.7.3'
     implementation 'com.zaxxer:HikariCP:5.1.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
+    implementation 'io.kubernetes:client-java:19.0.0'
+
+
 
     testImplementation 'io.cucumber:cucumber-java:7.15.0'
     testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.15.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.11.0-RC1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.11.0-RC1'
     testImplementation 'org.junit.platform:junit-platform-suite'
+    testImplementation 'org.junit.platform:junit-platform-suite-engine:1.11.0-RC1'
+
 }
 
 
