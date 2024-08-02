@@ -20,9 +20,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -33,6 +36,8 @@ import io.beandev.datorum.migration.Migration;
 import io.beandev.datorum.migration.Scope;
 import io.beandev.datorum.schema.jdbc.JdbcSchemaRepository;
 
+//@ExtendWith(TestSuiteImpl.class)
+@Tag("MyTestSuite")
 public class JdbcMigrationRepositoryTest {
     private DataSource dataSource;
     private JdbcMigrationRepository jdbcMigrationRepository;

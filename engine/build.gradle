@@ -17,15 +17,48 @@ dependencies {
     implementation 'io.kubernetes:client-java:18.0.0'
 
     //Test Implementation
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
-    testImplementation 'org.junit.platform:junit-platform-suite-api:1.9.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.11.0-RC1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.11.0-RC1'
+    testImplementation 'org.junit.platform:junit-platform-suite-api:1.11.0-RC1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-suite-engine:1.11.0-RC1'
 }
 
+
+
+
 test {
-    useJUnitPlatform()
-    include '**/TestSuite.class'
+    useJUnitPlatform(){
+        include '**/TestSuite.class'
+    }
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"  // Shows full stack traces for failed tests
+        showStandardStreams = true // Logs output from the tests
+    }
+
+    // Adding custom logging to capture test start and end
+    beforeTest { descriptor ->
+        logger.lifecycle("Starting test: ${descriptor.name}")
+    }
+
+    afterTest { descriptor, result ->
+        logger.lifecycle("Finished test: ${descriptor.name} - Result: ${result.resultType}")
+    }
+
+    // Additional configurations or custom logging
+    // Example: Print a message before and after the test task runs
+    doFirst {
+        logger.lifecycle("Starting the test task")
+    }
+
+    doLast {
+        logger.lifecycle("Finished the test task")
+    }
+    
 }
+
+
 
 
 
@@ -38,9 +71,4 @@ sourceSets {
             srcDirs = ['src/testIntegration/resources', 'src/testUnit/resources']
         }
     }
-}
-
-task runTestSuite(type: Test) {
-    useJUnitPlatform()
-    include '**/TestSuite.class'
 }
