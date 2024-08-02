@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- datorum_v1alpha1_databaseserver.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
