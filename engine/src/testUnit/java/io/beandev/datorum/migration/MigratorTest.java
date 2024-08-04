@@ -17,4 +17,10 @@ public class MigratorTest {
         out.println("hello");
         out.println("Testing " + repository.findAggregateSnapshot(null));
     }
+
+    @Test
+    void myTest2() {
+        out.println("hello");
+        out.println("Testing " + repository.findAggregateSnapshot(null));
+    }
 }
