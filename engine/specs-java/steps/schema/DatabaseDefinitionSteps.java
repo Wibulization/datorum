@@ -25,6 +25,8 @@ public class DatabaseDefinitionSteps {
     public void aSchemaWithATable() throws Exception {
         // Create Database
         CreatePostgres.getInstance();
+        dataSource = dataSource();
+        dropSchemaIfExist();
     }
 
     @And("an implementation of SchemaRepository")
@@ -44,10 +46,7 @@ public class DatabaseDefinitionSteps {
     }
 
     private JdbcSchemaRepository implementationOfSchema() {
-        dataSource = dataSource();
-
         JdbcSchemaRepository schemaRepository = new JdbcSchemaRepository(dataSource);
-
         return schemaRepository;
     }
 
@@ -76,7 +75,7 @@ public class DatabaseDefinitionSteps {
                 PreparedStatement pst = con.prepareStatement(query);
                 ResultSet rs = pst.executeQuery()) {
 
-            Assertions.assertTrue(rs.next(), "Schema datorum_schema existed");
+            Assertions.assertTrue(rs.next(), "Schema datorum_schema should exist");
 
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -86,4 +85,17 @@ public class DatabaseDefinitionSteps {
             }
         }
     }
+
+    private void dropSchemaIfExist() {
+        // Drop schema 'datorum_schema' if it exists
+        String query = "DROP SCHEMA IF EXISTS datorum_schema CASCADE";
+
+        try (Connection con = dataSource.getConnection();
+                PreparedStatement pst = con.prepareStatement(query)) {
+            pst.executeQuery();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
 }
