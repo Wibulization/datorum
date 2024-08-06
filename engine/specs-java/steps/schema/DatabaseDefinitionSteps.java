@@ -81,7 +81,7 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void dropSchemaIfExist() {
+    private void dropSchemaIfExists() {
         // Drop schema 'datorum_schema' if it exists
         String query = "DROP SCHEMA IF EXISTS datorum_schema CASCADE";
 
