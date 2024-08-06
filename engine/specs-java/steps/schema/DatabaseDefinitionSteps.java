@@ -22,11 +22,11 @@ public class DatabaseDefinitionSteps {
     private HikariDataSource dataSource;
 
     @Given("^a Postgres database without schemas$")
-    public void aSchemaWithATable() throws Exception {
+    public void aPostgresDatabaseWithoutSchemas() throws Exception {
         // Create Database
         CreatePostgres.getInstance();
         dataSource = dataSource();
-        dropSchemaIfExist();
+        dropSchemaIfExists();
     }
 
     @And("an implementation of SchemaRepository")
