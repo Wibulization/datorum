@@ -18,7 +18,7 @@ import io.cucumber.java.en.When;
 import io.cucumber.java.en.Then;
 
 public class DatabaseDefinitionSteps {
-    private JdbcSchemaRepository schema;
+    private JdbcSchemaRepository jdbcSchemaRepository;
     private HikariDataSource dataSource;
 
     @Given("^a Postgres database without schemas$")
@@ -31,23 +31,18 @@ public class DatabaseDefinitionSteps {
 
     @And("an implementation of SchemaRepository")
     public void anImplementationOfSchemaRepository() {
-        schema = implementationOfSchema();
-        Assertions.assertNotNull(schema, "SchemaRepository initialized");
+        jdbcSchemaRepository = new JdbcSchemaRepository(dataSource);
+        Assertions.assertNotNull(jdbcSchemaRepository, "JdbcSchemaRepository should not null");
     }
 
     @When("createBaseTables\\() is executed")
     public void createbasetablesIsExecuted() {
-        schema.createBaseTables();
+        jdbcSchemaRepository.createBaseTables();
     }
 
-    @Then("schema datorum_schema is created")
-    public void schemaIsCreated() {
-        checkSchemaExist();
-    }
-
-    private JdbcSchemaRepository implementationOfSchema() {
-        JdbcSchemaRepository schemaRepository = new JdbcSchemaRepository(dataSource);
-        return schemaRepository;
+    @Then("schema {word} is created")
+    public void schemaIsCreated(String schemaName) {
+        checkSchemaExist(schemaName);
     }
 
     private HikariDataSource dataSource() {
@@ -67,15 +62,15 @@ public class DatabaseDefinitionSteps {
         return cp;
     }
 
-    private void checkSchemaExist() {
+    private void checkSchemaExist(String schemaName) {
         // Verify schema 'datorum_schema'
-        String query = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'datorum_schema'";
+        String query = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = '" + schemaName + "'";
 
         try (Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(query);
                 ResultSet rs = pst.executeQuery()) {
 
-            Assertions.assertTrue(rs.next(), "Schema datorum_schema should exist");
+            Assertions.assertTrue(rs.next(), "Schema " + schemaName + "should exist");
 
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -92,7 +87,7 @@ public class DatabaseDefinitionSteps {
 
         try (Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(query)) {
-            pst.executeQuery();
+            pst.executeUpdate();
         } catch (SQLException ex) {
             ex.printStackTrace();
         }

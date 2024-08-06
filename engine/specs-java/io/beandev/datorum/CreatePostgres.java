@@ -119,7 +119,7 @@ public class CreatePostgres {
                 break;
             } else {
                 System.out.println("Pod is not ready, waiting...");
-                TimeUnit.SECONDS.sleep(30);
+                TimeUnit.SECONDS.sleep(60);
             }
         }
     }
