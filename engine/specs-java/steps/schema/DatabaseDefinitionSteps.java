@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.junit.jupiter.api.Assertions;
+
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -28,8 +30,7 @@ public class DatabaseDefinitionSteps {
     @And("an implementation of SchemaRepository")
     public void anImplementationOfSchemaRepository() {
         schema = implementationOfSchema();
-        if (schema == null)
-            System.out.println("Fail to connect PostgresDB");
+        Assertions.assertNotNull(schema, "SchemaRepository initialized");
     }
 
     @When("createBaseTables\\() is executed")
@@ -39,7 +40,7 @@ public class DatabaseDefinitionSteps {
 
     @Then("schema datorum_schema is created")
     public void schemaIsCreated() {
-        checkSchema();
+        checkSchemaExist();
     }
 
     private JdbcSchemaRepository implementationOfSchema() {
@@ -67,7 +68,7 @@ public class DatabaseDefinitionSteps {
         return cp;
     }
 
-    private void checkSchema() {
+    private void checkSchemaExist() {
         // Verify schema 'datorum_schema'
         String query = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'datorum_schema'";
 
@@ -75,11 +76,7 @@ public class DatabaseDefinitionSteps {
                 PreparedStatement pst = con.prepareStatement(query);
                 ResultSet rs = pst.executeQuery()) {
 
-            if (rs.next()) {
-                System.out.println("Schema 'datorum_schema' exists.");
-            } else {
-                System.out.println("Schema 'datorum_schema' does not exist.");
-            }
+            Assertions.assertTrue(rs.next(), "Schema datorum_schema existed");
 
         } catch (SQLException ex) {
             ex.printStackTrace();
