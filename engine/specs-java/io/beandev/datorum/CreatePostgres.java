@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+import java.lang.Exception;
+
+import org.apache.commons.lang3.SystemUtils;
 
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.openapi.ApiClient;
@@ -98,12 +101,19 @@ public class CreatePostgres {
 
     // Method to check if the Service is ready
     private static void waitForServiceReady(CoreV1Api api, String namespace, String serviceName) throws Exception {
+        // Timeout for the Sercvice is 30 seconds
+        long timeout = 30;
+        long startTime = System.currentTimeMillis();
         while (true) {
             V1Service service = api.readNamespacedService(serviceName, namespace, null);
             if (service.getStatus() != null && service.getStatus().getLoadBalancer() != null) {
                 System.out.println("Service is ready.");
                 break;
             } else {
+                long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+                if (elapsed > timeout) {
+                    throw new Exception("Timeout : Service is not ready in 30 seconds");
+                }
                 System.out.println("Service is not ready, waiting...");
                 TimeUnit.SECONDS.sleep(5);
             }
@@ -112,14 +122,21 @@ public class CreatePostgres {
 
     // Method to check if the Pod is ready
     private static void waitForPodReady(CoreV1Api api, String namespace, String podName) throws Exception {
+        // Timeout for the Pod is 60 seconds
+        long timeout = 60;
+        long startTime = System.currentTimeMillis();
         while (true) {
             V1Pod pod = api.readNamespacedPod(podName, namespace, null);
             if (pod.getStatus() != null && pod.getStatus().getPhase().equals("Running")) {
                 System.out.println("Pod is ready.");
                 break;
             } else {
+                long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+                if (elapsed > timeout) {
+                    throw new Exception("Timeout : Pod is not ready in 1 minute");
+                }
                 System.out.println("Pod is not ready, waiting...");
-                TimeUnit.SECONDS.sleep(60);
+                TimeUnit.SECONDS.sleep(30);
             }
         }
     }
