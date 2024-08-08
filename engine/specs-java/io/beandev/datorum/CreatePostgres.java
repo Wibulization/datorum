@@ -7,8 +7,6 @@ import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.lang.Exception;
 
-import org.apache.commons.lang3.SystemUtils;
-
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
