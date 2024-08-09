@@ -63,7 +63,7 @@ public class DatabaseDefinitionSteps {
     }
 
     private void checkSchemaExist(String schemaName) {
-        // Verify schema 'datorum_schema'
+        // Verify schema which name is from schemaName
         String query = "SELECT schema_name FROM information_schema.schemata WHERE schema_name = '" + schemaName + "'";
 
         try (Connection con = dataSource.getConnection();
@@ -82,7 +82,7 @@ public class DatabaseDefinitionSteps {
     }
 
     private void dropSchemaIfExists(String schemaName) {
-        // Drop schema 'datorum_schema' if it exists
+        // Drop schema which name is from schemaName if it exists
         String query = "DROP SCHEMA IF EXISTS " + schemaName + " CASCADE";
 
         try (Connection con = dataSource.getConnection();
