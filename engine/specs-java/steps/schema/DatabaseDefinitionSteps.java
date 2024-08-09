@@ -26,13 +26,13 @@ public class DatabaseDefinitionSteps {
         // Create Database
         CreatePostgres.getInstance();
         dataSource = dataSource();
-        dropSchemaIfExists();
+        String schemaName = "datorum_schema";
+        dropSchemaIfExists(schemaName);
     }
 
     @And("an implementation of SchemaRepository")
     public void anImplementationOfSchemaRepository() {
         jdbcSchemaRepository = new JdbcSchemaRepository(dataSource);
-        Assertions.assertNotNull(jdbcSchemaRepository, "JdbcSchemaRepository should not null");
     }
 
     @When("createBaseTables\\() is executed")
@@ -81,9 +81,9 @@ public class DatabaseDefinitionSteps {
         }
     }
 
-    private void dropSchemaIfExists() {
+    private void dropSchemaIfExists(String schemaName) {
         // Drop schema 'datorum_schema' if it exists
-        String query = "DROP SCHEMA IF EXISTS datorum_schema CASCADE";
+        String query = "DROP SCHEMA IF EXISTS " + schemaName + " CASCADE";
 
         try (Connection con = dataSource.getConnection();
                 PreparedStatement pst = con.prepareStatement(query)) {
