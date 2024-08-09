@@ -77,7 +77,7 @@ public class CreatePostgres {
     }
 
     // Method to create a Kubernetes Service
-    private static V1Service createServiceDefinition() {
+    private static V1Service createPostgresServiceDefinition() {
         return new V1Service()
                 .apiVersion("v1")
                 .kind("Service")
@@ -161,8 +161,9 @@ public class CreatePostgres {
         } catch (ApiException e) {
             if (e.getCode() == 404) {
                 // Service does not exist, create it
-                V1Service serviceDef = createServiceDefinition();
-                V1Service createdService = api.createNamespacedService(namespace, serviceDef, null, null, null, null);
+                V1Service postgresServiceDef = createPostgresServiceDefinition();
+                V1Service createdService = api.createNamespacedService(namespace, postgresServiceDef, null, null, null,
+                        null);
                 System.out.println("Service created: " + createdService.getMetadata().getName());
             } else {
                 throw e; // Rethrow other API exceptions
