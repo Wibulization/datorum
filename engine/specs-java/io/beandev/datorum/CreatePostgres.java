@@ -56,7 +56,7 @@ public class CreatePostgres {
     }
 
     // Method to create PostgreSQL Pod
-    private static V1Pod podBody() {
+    private static V1Pod createPostgresPodDefinition() {
         return new V1Pod()
                 .apiVersion("v1")
                 .kind("Pod")
@@ -77,7 +77,7 @@ public class CreatePostgres {
     }
 
     // Method to create a Kubernetes Service
-    private static V1Service serviceBody() {
+    private static V1Service createServiceDefinition() {
         return new V1Service()
                 .apiVersion("v1")
                 .kind("Service")
@@ -143,8 +143,8 @@ public class CreatePostgres {
         } catch (ApiException e) {
             if (e.getCode() == 404) {
                 // Pod does not exist, create it
-                V1Pod podBody = podBody();
-                V1Pod createdPod = api.createNamespacedPod(namespace, podBody, null, null, null, null);
+                V1Pod postgresPodDef = createPostgresPodDefinition();
+                V1Pod createdPod = api.createNamespacedPod(namespace, postgresPodDef, null, null, null, null);
                 System.out.println("PostgreSQL Pod created: " + createdPod.getMetadata().getName());
             } else {
                 throw e; // Rethrow other API exceptions
@@ -161,8 +161,8 @@ public class CreatePostgres {
         } catch (ApiException e) {
             if (e.getCode() == 404) {
                 // Service does not exist, create it
-                V1Service serviceBody = serviceBody();
-                V1Service createdService = api.createNamespacedService(namespace, serviceBody, null, null, null, null);
+                V1Service serviceDef = createServiceDefinition();
+                V1Service createdService = api.createNamespacedService(namespace, serviceDef, null, null, null, null);
                 System.out.println("Service created: " + createdService.getMetadata().getName());
             } else {
                 throw e; // Rethrow other API exceptions
