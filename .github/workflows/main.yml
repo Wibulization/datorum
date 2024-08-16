@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 
-=======
 name: CI
 
 on:
@@ -36,4 +34,4 @@ jobs:
 
     - name: Build and Test
       run: ./gradlew build
->>>>>>> 14512b2f1421ed3ea46f0df670c966d8d151aba7
+
