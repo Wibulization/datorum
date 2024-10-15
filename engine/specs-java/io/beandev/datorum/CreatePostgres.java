@@ -1,6 +1,7 @@
 package io.beandev.datorum;
 
 import io.kubernetes.client.custom.IntOrString;
+import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.Configuration;
@@ -8,12 +9,21 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1ContainerPort;
 import io.kubernetes.client.openapi.models.V1EnvVar;
+import io.kubernetes.client.openapi.models.V1HostPathVolumeSource;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
+import io.kubernetes.client.openapi.models.V1PersistentVolume;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimSpec;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeSpec;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodSpec;
 import io.kubernetes.client.openapi.models.V1Service;
 import io.kubernetes.client.openapi.models.V1ServicePort;
 import io.kubernetes.client.openapi.models.V1ServiceSpec;
+import io.kubernetes.client.openapi.models.V1Volume;
+import io.kubernetes.client.openapi.models.V1VolumeMount;
+import io.kubernetes.client.openapi.models.V1VolumeResourceRequirements;
 import io.kubernetes.client.util.Config;
 
 import java.util.Arrays;
@@ -47,6 +57,10 @@ public class CreatePostgres {
 
         waitForPostgresServiceReady(api, "default", "postgres-service");
 
+        ensurePostgresPVExists(api, "postgres-pv");
+
+        ensurePostgresPVCExists(api, "default", "postgres-persistent-volume-claim");
+
         ensurePostgresPodExists(api, "default", "postgres");
 
         waitForPostgresPodReady(api, "default", "postgres");
@@ -71,7 +85,14 @@ public class CreatePostgres {
                                         new V1EnvVar().name("POSTGRES_USER")
                                                 .value("postgres"),
                                         new V1EnvVar().name("POSTGRES_PASSWORD")
-                                                .value("password"))))));
+                                                .value("password")))
+                                .volumeMounts(Collections.singletonList(new V1VolumeMount()
+                                        .name("postgresdb")
+                                        .mountPath("/var/lib/postgresql/data")))))
+                        .volumes(Collections.singletonList(new V1Volume()
+                                .name("postgresdb")
+                                .persistentVolumeClaim(new V1PersistentVolumeClaimVolumeSource()
+                                        .claimName("postgres-persistent-volume-claim")))));
     }
 
     private static V1Service createPostgresServiceDefinition() {
@@ -88,6 +109,34 @@ public class CreatePostgres {
                                         .targetPort(new IntOrString(5432))
                                         .nodePort(30000)
                                         .protocol("TCP"))));
+    }
+
+    private static V1PersistentVolume createPostgresPVDefinition() {
+        return new V1PersistentVolume()
+                .apiVersion("v1")
+                .kind("PersistentVolume")
+                .metadata(new V1ObjectMeta().name("postgres-pv").labels(Map.of("type", "local")))
+                .spec(new V1PersistentVolumeSpec()
+                        .capacity(Map.of("storage", new Quantity("1Gi")))
+                        .accessModes(Collections.singletonList("ReadWriteOnce"))
+                        .persistentVolumeReclaimPolicy("Retain")
+                        .storageClassName("manual")
+                        .hostPath(new V1HostPathVolumeSource()
+                                .path("/Users/Khoi-Kun/Downloads/Homework/HowToUnderstand/vol"))); // Replace this with
+                                                                                                   // an actual path on
+                                                                                                   // your node
+    }
+
+    private static V1PersistentVolumeClaim createPostgresPVCDefinition() {
+        return new V1PersistentVolumeClaim()
+                .apiVersion("v1")
+                .kind("PersistentVolumeClaim")
+                .metadata(new V1ObjectMeta().name("postgres-persistent-volume-claim"))
+                .spec(new V1PersistentVolumeClaimSpec()
+                        .accessModes(Collections.singletonList("ReadWriteOnce"))
+                        .resources(new V1VolumeResourceRequirements()
+                                .requests(Map.of("storage", Quantity.fromString("1Gi"))))
+                        .storageClassName("manual"));
     }
 
     private static void waitForPostgresServiceReady(CoreV1Api api, String namespace, String serviceName)
@@ -140,6 +189,43 @@ public class CreatePostgres {
                 V1Pod postgresPodDef = createPostgresPodDefinition();
                 V1Pod createdPod = api.createNamespacedPod(namespace, postgresPodDef).execute();
                 System.out.println("PostgreSQL Pod created: " + createdPod.getMetadata().getName());
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    private static void ensurePostgresPVExists(CoreV1Api api, String persistentVolumeName) throws Exception {
+        try {
+            V1PersistentVolume existingPersistentVolume = api.readPersistentVolume(persistentVolumeName).execute();
+            System.out.println(
+                    "PostgreSQL PersistentVolume already exists: " + existingPersistentVolume.getMetadata().getName());
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                V1PersistentVolume postgresPersistentVolumeDef = createPostgresPVDefinition();
+                V1PersistentVolume createdPersistentVolume = api.createPersistentVolume(postgresPersistentVolumeDef)
+                        .execute();
+                System.out.println("PostgreSQL Pod created: " + createdPersistentVolume.getMetadata().getName());
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    private static void ensurePostgresPVCExists(CoreV1Api api, String namespace, String persistentVolumeClaimName)
+            throws Exception {
+        try {
+            V1PersistentVolumeClaim existingPersistentVolumeClaim = api
+                    .readNamespacedPersistentVolumeClaim(persistentVolumeClaimName, namespace).execute();
+            System.out.println(
+                    "PostgreSQL PersistentVolumeClaim already exists: "
+                            + existingPersistentVolumeClaim.getMetadata().getName());
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                V1PersistentVolumeClaim postgresPersistentVolumeClaimDef = createPostgresPVCDefinition();
+                V1PersistentVolumeClaim createdPersistentVolumeClaim = api
+                        .createNamespacedPersistentVolumeClaim(namespace, postgresPersistentVolumeClaimDef).execute();
+                System.out.println("PostgreSQL Pod created: " + createdPersistentVolumeClaim.getMetadata().getName());
             } else {
                 throw e;
             }
